@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="font-weight-bold"><i class="fas fa-file-contract text-primary"></i> Backtest Report</h2>
+            <h5 class="text-secondary font-weight-bold mt-1">
+                {{ result.strategy.name }} <span class="badge bg-dark text-white ml-2">{{ result.strategy.stock.symbol }}</span>
+            </h5>
+            <p class="text-muted mb-0"><i class="fas fa-calendar-alt"></i> {{ result.strategy.start_date }} to {{ result.strategy.end_date }}</p>
+        </div>
+        <div class="mt-3 mt-md-0">
+            <a href="{% url 'download_trades_csv' result.pk %}" class="btn btn-success shadow-sm font-weight-bold mr-2" style="border-radius: 8px;">
+                <i class="fas fa-file-csv"></i> Download CSV
+            </a>
+            <a href="{% url 'backtest_dashboard' %}" class="btn btn-outline-secondary font-weight-bold shadow-sm" style="border-radius: 8px;">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px; background: #e3f2fd;">
+                <div class="card-body text-center p-3">
+                    <h6 class="text-primary mb-1">Total Return</h6>
+                    <h4 class="font-weight-bold mb-0 {% if result.total_return_pct > 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ result.total_return_pct }}%
+                    </h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px; background: #e8f5e9;">
+                <div class="card-body text-center p-3">
+                    <h6 class="text-success mb-1">Win Rate</h6>
+                    <h4 class="font-weight-bold mb-0 text-success">{{ result.win_rate }}%</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px; background: #fff3e0;">
+                <div class="card-body text-center p-3">
+                    <h6 class="text-warning mb-1">Max Drawdown</h6>
+                    <h4 class="font-weight-bold mb-0 text-danger">{{ result.max_drawdown_pct }}%</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px; background: #f3e5f5;">
+                <div class="card-body text-center p-3">
+                    <h6 class="text-purple mb-1" style="color: #8e24aa;">Sharpe Ratio</h6>
+                    <h4 class="font-weight-bold mb-0">{{ result.sharpe_ratio }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-body d-flex justify-content-between flex-wrap p-3 bg-light" style="border-radius: 12px;">
+                    <div class="px-3">
+                        <small class="text-muted text-uppercase font-weight-bold">Initial Capital</small><br>
+                        <strong>₹{{ result.initial_capital }}</strong>
+                    </div>
+                    <div class="px-3">
+                        <small class="text-muted text-uppercase font-weight-bold">Final Capital</small><br>
+                        <strong class="{% if result.final_capital > result.initial_capital %}text-success{% else %}text-danger{% endif %}">
+                            ₹{{ result.final_capital }}
+                        </strong>
+                    </div>
+                    <div class="px-3">
+                        <small class="text-muted text-uppercase font-weight-bold">Total Trades</small><br>
+                        <strong>{{ result.total_trades }} ({{ result.winning_trades }}W / {{ result.losing_trades }}L)</strong>
+                    </div>
+                    <div class="px-3">
+                        <small class="text-muted text-uppercase font-weight-bold">Net P&L</small><br>
+                        <strong class="{% if result.total_profit_loss > 0 %}text-success{% else %}text-danger{% endif %}">
+                            ₹{{ result.total_profit_loss }}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px;">
+        <div class="card-header bg-white font-weight-bold" style="border-radius: 12px 12px 0 0;">
+            <i class="fas fa-chart-line text-success"></i> Equity Curve (Capital Growth)
+        </div>
+        <div class="card-body">
+            <div id="equityChart"></div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0" style="border-radius: 12px;">
+        <div class="card-header bg-dark text-white font-weight-bold" style="border-radius: 12px 12px 0 0;">
+            <i class="fas fa-list"></i> Trade Execution Log
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 text-center">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Type</th>
+                            <th>Entry Date</th>
+                            <th>Entry Price</th>
+                            <th>Exit Date</th>
+                            <th>Exit Price</th>
+                            <th>Qty</th>
+                            <th>P&L (₹)</th>
+                            <th>P&L (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trade in trades %}
+                        <tr>
+                            <td class="align-middle text-muted">{{ forloop.counter }}</td>
+                            <td class="align-middle font-weight-bold {% if trade.trade_type == 'LONG' %}text-success{% else %}text-danger{% endif %}">
+                                {{ trade.trade_type }}
+                            </td>
+                            <td class="align-middle">{{ trade.entry_date }}</td>
+                            <td class="align-middle">₹{{ trade.entry_price|floatformat:2 }}</td>
+
+                            <td class="align-middle">
+                                {% if trade.exit_date %}{{ trade.exit_date }}{% else %}<span class="badge bg-warning text-dark">Open</span>{% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% if trade.exit_price %}₹{{ trade.exit_price|floatformat:2 }}{% else %}-{% endif %}
+                            </td>
+
+                            <td class="align-middle">{{ trade.quantity }}</td>
+
+                            <td class="align-middle font-weight-bold {% if trade.profit_loss > 0 %}text-success{% elif trade.profit_loss < 0 %}text-danger{% endif %}">
+                                {% if trade.profit_loss > 0 %}+{% endif %}₹{{ trade.profit_loss|floatformat:2 }}
+                            </td>
+                            <td class="align-middle font-weight-bold {% if trade.profit_loss_pct > 0 %}text-success{% elif trade.profit_loss_pct < 0 %}text-danger{% endif %}">
+                                {% if trade.profit_loss_pct > 0 %}+{% endif %}{{ trade.profit_loss_pct|floatformat:2 }}%
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                <i class="fas fa-ghost mb-2" style="font-size: 2rem;"></i><br>
+                                No trades were executed in this backtest.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 🔥 SDE FIX: Direct Django parsing (JSON.parse ki zaroorat nahi)
+        let equityData = [];
+        try {
+            // Hum safe filter se direct array format me data le rahe hain
+            equityData = {{ equity_curve_json|safe }};
+            console.log("Backend se ye data aa raha hai:", equityData[0]); // F12 console me check karne ke liye
+        } catch (e) {
+            console.error("Data load error:", e);
+        }
+
+        // Chart Data Formatting with Smart Key Detection
+        const chartData = equityData.map(item => {
+            // 🔥 SMART FALLBACK: Backend se paisa kisi bhi naam se aaye, hum usko pakad lenge!
+            let moneyValue = item.equity || item.capital || item.total || item.portfolio_value || item.value || item.close || 0;
+
+            // Date ko bhi fallback de diya
+            let dateValue = item.date || item.Date || item.time || item.timestamp;
+
+            return {
+                x: dateValue,
+                y: parseFloat(moneyValue).toFixed(2) // Ise properly number me convert kar diya
+            };
+        });
+
+        var options = {
+            series: [{
+                name: "Portfolio Value (₹)",
+                data: chartData
+            }],
+            chart: {
+                type: 'area',
+                height: 400,
+                toolbar: { show: true }
+            },
+            colors: ['#00E396'],
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.6,
+                    opacityTo: 0.05,
+                    stops: [0, 90, 100]
+                }
+            },
+            dataLabels: { enabled: false },
+            stroke: {
+                curve: 'smooth',
+                width: 2
+            },
+            xaxis: {
+                type: 'datetime',
+                tooltip: { enabled: false }
+            },
+            yaxis: {
+                labels: {
+                    formatter: function (value) {
+                        // Agar NaN aaye toh handle ho jaye
+                        if(isNaN(value)) return "₹0";
+                        return "₹" + Math.round(value);
+                    }
+                }
+            },
+            tooltip: {
+                x: { format: 'dd MMM yyyy' }
+            }
+        };
+
+        if(chartData.length > 0 && chartData[0].y !== "NaN") {
+            var chart = new ApexCharts(document.querySelector("#equityChart"), options);
+            chart.render();
+        } else {
+            document.querySelector("#equityChart").innerHTML = "<div class='text-center p-5 text-muted'><i class='fas fa-chart-bar mb-3' style='font-size: 2rem;'></i><br>No valid equity data available to draw chart. Check console (F12).</div>";
+        }
+    });
+</script>
+{% endblock %}

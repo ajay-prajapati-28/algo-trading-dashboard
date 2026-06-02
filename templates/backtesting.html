@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="font-weight-bold"><i class="fas fa-vial text-primary"></i> Algorithmic Backtesting</h2>
+            <p class="text-muted">Test your trading strategies against historical data.</p>
+        </div>
+        <a href="{% url 'index' %}" class="btn btn-outline-secondary font-weight-bold shadow-sm" style="border-radius: 8px;">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger shadow-sm">{{ error }}</div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-header bg-dark text-white font-weight-bold" style="border-radius: 12px 12px 0 0;">
+                    <i class="fas fa-cogs"></i> Setup Strategy
+                </div>
+                <div class="card-body bg-light">
+                    <form method="POST" action="{% url 'backtesting' %}">
+                        {% csrf_token %}
+                        
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold">Select Stock</label>
+                            <select name="symbol" class="form-control shadow-sm" required style="border-radius: 8px;">
+                                <option value="">-- Choose Stock --</option>
+                                {% for item in user_stocks %}
+                                    <option value="{{ item.symbol }}" {% if item.symbol == symbol %}selected{% endif %}>
+                                        {{ item.symbol }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold">Time Period</label>
+                            <select name="period" class="form-control shadow-sm" style="border-radius: 8px;">
+                                <option value="6mo" {% if period == '6mo' %}selected{% endif %}>6 Months</option>
+                                <option value="1y" {% if period == '1y' %}selected{% endif %}>1 Year</option>
+                                <option value="2y" {% if period == '2y' %}selected{% endif %}>2 Years</option>
+                                <option value="5y" {% if period == '5y' %}selected{% endif %}>5 Years</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <label class="font-weight-bold">Trading Strategy</label>
+                            <select name="strategy" class="form-control shadow-sm" style="border-radius: 8px;">
+                                <option value="ALL" class="font-weight-bold text-success" {% if is_all %}selected{% endif %}>
+                                    🔥 Run ALL Strategies (Compare)
+                                </option>
+                                <option value="SMA_CROSS" {% if not is_all and results.0.name == 'SMA Crossover (20 vs 50)' %}selected{% endif %}>SMA Crossover (20 vs 50)</option>
+                                <option value="EMA_CROSS" {% if not is_all and results.0.name == 'EMA Crossover (9 vs 21)' %}selected{% endif %}>EMA Crossover (9 vs 21)</option>
+                                <option value="MOMENTUM" {% if not is_all and results.0.name == 'Price Momentum (Close > SMA20)' %}selected{% endif %}>Price Momentum</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 font-weight-bold shadow-sm" style="border-radius: 8px; padding: 10px;">
+                            <i class="fas fa-play-circle"></i> Run Backtest
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            {% if results %}
+            
+            <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px; background: #f8f9fa;">
+                <div class="card-body d-flex justify-content-between align-items-center p-3">
+                    <div>
+                        <h6 class="text-secondary mb-1">Buy & Hold Return (Benchmark)</h6>
+                        <h4 class="font-weight-bold mb-0 {% if buy_hold_return > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ buy_hold_return }}%
+                        </h4>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge bg-dark text-white px-3 py-2" style="font-size: 0.9rem; border-radius: 6px;">
+                            {{ symbol }} | {{ period|upper }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <h5 class="font-weight-bold mb-3"><i class="fas fa-trophy text-warning"></i> Strategy Results</h5>
+            
+            <div class="table-responsive shadow-sm" style="border-radius: 12px;">
+                <table class="table table-hover bg-white mb-0">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th class="py-3">Rank</th>
+                            <th class="py-3">Strategy Name</th>
+                            <th class="py-3 text-center">Net Profit / Loss</th>
+                            <th class="py-3 text-center">Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for res in results %}
+                        <tr>
+                            <td class="align-middle font-weight-bold text-muted">#{{ forloop.counter }}</td>
+                            <td class="align-middle font-weight-bold">{{ res.name }}</td>
+                            
+                            <td class="align-middle text-center font-weight-bold" style="font-size: 1.1rem;">
+                                {% if res.return > 0 %}
+                                    <span class="text-success">+{{ res.return }}%</span>
+                                {% else %}
+                                    <span class="text-danger">{{ res.return }}%</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="align-middle text-center">
+                                {% if res.beats_market %}
+                                    <span class="badge bg-success text-white px-3 py-1 shadow-sm" style="border-radius: 50px;">Beats Market <i class="fas fa-check-circle"></i></span>
+                                {% else %}
+                                    <span class="badge bg-danger text-white px-3 py-1 shadow-sm" style="border-radius: 50px;">Underperforms <i class="fas fa-times-circle"></i></span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% elif request.method == 'GET' %}
+            <div class="card shadow-sm border-0 d-flex justify-content-center align-items-center" style="border-radius: 12px; min-height: 400px; background: #f8f9fa;">
+                <div class="text-center text-muted">
+                    <i class="fas fa-laptop-code mb-3" style="font-size: 3rem; color: #cbd5e1;"></i>
+                    <h5>Ready for Analysis</h5>
+                    <p>Select a stock and strategy from the left panel to begin.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width: 850px;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="font-weight-bold"><i class="fas fa-key text-primary"></i> Integration Settings</h2>
+            <p class="text-muted">Manage your Broker and AI API Keys securely.</p>
+        </div>
+        <a href="{% url 'index' %}" class="btn btn-outline-secondary font-weight-bold shadow-sm" style="border-radius: 8px;">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} shadow-sm alert-dismissible fade show" style="border-radius: 8px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px; border-left: 5px solid #00E396 !important;">
+        <div class="card-header bg-white font-weight-bold py-3" style="border-radius: 12px 12px 0 0; font-size: 1.2rem;">
+            <i class="fas fa-chart-line text-success mr-2"></i> Groww Configuration
+        </div>
+        <div class="card-body bg-light">
+            <form method="POST" action="{% url 'broker_settings' %}">
+                {% csrf_token %}
+                {% if profile.groww_api_key and profile.groww_secret_key %}
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold text-secondary">Groww Credentials</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">API Key</span>
+                            <input type="password" class="form-control" value="************************" readonly style="background-color: #e9ecef;">
+                            <span class="input-group-text bg-white">Secret Key</span>
+                            <input type="password" class="form-control" value="************************" readonly style="background-color: #e9ecef;">
+                            
+                            <input type="hidden" name="action" value="remove_groww">
+                            <button type="submit" class="btn btn-danger font-weight-bold px-4" style="border-radius: 0 8px 8px 0;" onclick="return confirm('Remove Groww Keys?');">
+                                <i class="fas fa-trash-alt"></i> Remove
+                            </button>
+                        </div>
+                        <small class="text-success mt-2 d-block"><i class="fas fa-check-circle"></i> Connected securely</small>
+                    </div>
+                {% else %}
+                    <input type="hidden" name="action" value="save_groww">
+                    <div class="row">
+                        <div class="col-md-6 form-group mb-3">
+                            <label class="font-weight-bold text-secondary">GROW_API_KEY</label>
+                            <input type="text" name="groww_api_key" class="form-control shadow-sm" placeholder="Enter Groww API Key" required style="border-radius: 8px;">
+                        </div>
+                        <div class="col-md-6 form-group mb-3">
+                            <label class="font-weight-bold text-secondary">GROW_SECRET_KEY</label>
+                            <input type="password" name="groww_secret_key" class="form-control shadow-sm" placeholder="Enter Groww Secret Key" required style="border-radius: 8px;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success font-weight-bold mt-2 shadow-sm" style="border-radius: 8px;">
+                        <i class="fas fa-save"></i> Save Groww Keys
+                    </button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px; border-left: 5px solid #0056b3 !important;">
+        <div class="card-header bg-white font-weight-bold py-3" style="border-radius: 12px 12px 0 0; font-size: 1.2rem;">
+            <i class="fas fa-chart-pie text-primary mr-2"></i> Dhan Configuration
+        </div>
+        <div class="card-body bg-light">
+            <form method="POST" action="{% url 'broker_settings' %}">
+                {% csrf_token %}
+                {% if profile.dhan_client_id and profile.dhan_access_token %}
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold text-secondary">Dhan Credentials</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">Client ID</span>
+                            <input type="text" class="form-control" value="{{ profile.dhan_client_id }}" readonly style="background-color: #e9ecef; max-width: 150px;">
+                            <span class="input-group-text bg-white">Access Token</span>
+                            <input type="password" class="form-control" value="************************" readonly style="background-color: #e9ecef;">
+                            
+                            <input type="hidden" name="action" value="remove_dhan">
+                            <button type="submit" class="btn btn-danger font-weight-bold px-4" style="border-radius: 0 8px 8px 0;" onclick="return confirm('Remove Dhan Credentials?');">
+                                <i class="fas fa-trash-alt"></i> Remove
+                            </button>
+                        </div>
+                        <small class="text-success mt-2 d-block"><i class="fas fa-check-circle"></i> Connected securely</small>
+                    </div>
+                {% else %}
+                    <input type="hidden" name="action" value="save_dhan">
+                    <div class="row">
+                        <div class="col-md-4 form-group mb-3">
+                            <label class="font-weight-bold text-secondary">DHAN_CLIENT_ID</label>
+                            <input type="text" name="dhan_client_id" class="form-control shadow-sm" placeholder="e.g. 1100023456" required style="border-radius: 8px;">
+                        </div>
+                        <div class="col-md-8 form-group mb-3">
+                            <label class="font-weight-bold text-secondary">DHAN_ACCESS_TOKEN</label>
+                            <input type="password" name="dhan_access_token" class="form-control shadow-sm" placeholder="Paste your Access Token" required style="border-radius: 8px;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary font-weight-bold shadow-sm mt-2" style="border-radius: 8px;">
+                        <i class="fas fa-save"></i> Save Dhan Keys
+                    </button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px; border-left: 5px solid #F4B400 !important;">
+        <div class="card-header bg-white font-weight-bold py-3" style="border-radius: 12px 12px 0 0; font-size: 1.2rem;">
+            <i class="fas fa-robot text-warning mr-2"></i> Google Gemini AI
+        </div>
+        <div class="card-body bg-light">
+            <form method="POST" action="{% url 'broker_settings' %}">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label class="font-weight-bold text-secondary">GEMINI_API_KEY</label>
+                    {% if profile.gemini_api_key %}
+                        <div class="input-group">
+                            <input type="password" class="form-control" value="****************************************" readonly style="border-radius: 8px 0 0 8px; background-color: #e9ecef;">
+                            <input type="hidden" name="action" value="remove_gemini">
+                            <button type="submit" class="btn btn-danger font-weight-bold px-4" style="border-radius: 0 8px 8px 0;" onclick="return confirm('Remove Gemini API Key?');">
+                                <i class="fas fa-trash-alt"></i> Remove
+                            </button>
+                        </div>
+                        <small class="text-success mt-2 d-block"><i class="fas fa-check-circle"></i> Connected securely for Market Analysis</small>
+                    {% else %}
+                        <input type="hidden" name="action" value="save_gemini">
+                        <input type="password" name="gemini_api_key" class="form-control shadow-sm" placeholder="Paste your Gemini AI API Key" required style="border-radius: 8px;">
+                        <button type="submit" class="btn btn-warning font-weight-bold mt-3 shadow-sm" style="border-radius: 8px; color: #fff;">
+                            <i class="fas fa-save"></i> Save Gemini Key
+                        </button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    setTimeout(function() {
+        let alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            alert.style.transition = "opacity 0.5s ease";
+            alert.style.opacity = "0";
+            setTimeout(function() { alert.style.display = "none"; }, 500); 
+        });
+    }, 3000);
+</script>
+{% endblock %}

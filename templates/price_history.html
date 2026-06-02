@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-history"></i> {{ stock.symbol }} - Price History</h2>
+            <h6 class="text-secondary">{{ stock.company_name }} | Exchange: {{ stock.symbol_id }}</h6>
+        </div>
+        <div>
+            <button id="ai-history-btn" class="btn btn-warning shadow-sm font-weight-bold mr-2" data-symbol="{{ stock.symbol }}">
+                <i class="fas fa-brain"></i> AI Stock Report
+            </button>
+            <a href="{% url 'index' %}" class="btn btn-secondary shadow-sm">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm border-warning" id="ai-result-card" style="display: none;">
+        <div class="card-header bg-warning text-dark font-weight-bold d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-robot"></i> Gemini AI Analysis for {{ stock.symbol }}</span>
+            <button type="button" class="btn btn-sm btn-outline-dark" id="close-ai-btn">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="ai-loading" class="text-center py-4">
+                <div class="spinner-border text-warning mb-2" role="status"></div>
+                <h6>Analyzing price history & market sentiment...</h6>
+            </div>
+            <div id="ai-content" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white">
+            <i class="fas fa-list"></i> Last 100 Price Updates
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Date & Time</th>
+                            <th>Live Price (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in history %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ record.fetched_at|date:"Y-m-d h:i:s A" }}</td>
+                            <td class="font-weight-bold">
+                                {% if record.live_price == "Not Found" %}
+                                    <span class="text-danger">Not Found</span>
+                                {% else %}
+                                    <span class="text-success">{{ record.live_price|floatformat:2 }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">No price history available. Fetch prices from the dashboard first.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const aiBtn = document.getElementById('ai-history-btn');
+        const aiCard = document.getElementById('ai-result-card');
+        const aiLoading = document.getElementById('ai-loading');
+        const aiContent = document.getElementById('ai-content');
+        const closeBtn = document.getElementById('close-ai-btn');
+
+        // Close AI Card
+        closeBtn.addEventListener('click', function() {
+            aiCard.style.display = 'none';
+        });
+
+        // AI Button Click
+        aiBtn.addEventListener('click', function() {
+            const symbol = this.getAttribute('data-symbol');
+
+            // Show Card and Loading
+            aiCard.style.display = 'block';
+            aiLoading.style.display = 'block';
+            aiContent.style.display = 'none';
+            aiContent.innerHTML = '';
+
+            // API Call to Backend
+            fetch(`/ai_analyze_history/${symbol}/`)
+                .then(response => response.json())
+                .then(data => {
+                    aiLoading.style.display = 'none';
+                    aiContent.style.display = 'block';
+
+                    if (data.status === 'success') {
+                        aiContent.innerHTML = data.analysis;
+                    } else {
+                        aiContent.innerHTML = `<div class="alert alert-danger"><b>Error:</b> ${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching AI data:", error);
+                    aiLoading.style.display = 'none';
+                    aiContent.style.display = 'block';
+                    aiContent.innerHTML = `<div class="alert alert-danger">Failed to connect to AI server.</div>`;
+                });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,435 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-5 px-md-5">
+
+    <!-- 🔥 TOP HEADER & BUTTONS ROW -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="font-weight-bold"><i class="fas fa-chart-line text-primary"></i> Algo Trading Dashboard</h2>
+            <p class="text-muted">Manage your portfolio, track live prices, and execute algorithms.</p>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="d-flex align-items-center flex-wrap" style="gap: 10px;">
+            <!-- LIVE TICKING CLOCK -->
+            <div class="d-flex align-items-center bg-dark text-white shadow-sm px-3 py-1" style="border-radius: 50px;">
+                <i class="fas fa-clock text-warning mr-2"></i>
+                <span id="liveMarketClock" class="font-weight-bold" style="font-size: 1rem; letter-spacing: 1px;">--:--:--</span>
+            </div>
+
+            <!-- Profile Pill -->
+            <div class="d-flex align-items-center bg-white shadow-sm px-3 py-1" style="border-radius: 50px; border: 1px solid #e0e0e0;">
+                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0D8ABC&color=fff&rounded=true&size=30&bold=true" class="mr-2" alt="DP">
+                <span class="font-weight-bold text-dark" style="font-size: 1rem;">
+                    Hi, {{ user.username|title }}
+                </span>
+            </div>
+
+            <a href="{% url 'pro_algo_dashboard' %}" class="btn btn-info shadow-sm font-weight-bold text-white" style="border-radius: 50px; padding: 6px 16px;">
+                <i class="fas fa-robot"></i> Pro Algo Engine
+            </a>
+
+            <a href="{% url 'broker_settings' %}" class="btn btn-outline-dark shadow-sm font-weight-bold" style="border-radius: 50px; padding: 6px 16px;">
+                <i class="fas fa-cog"></i> API Keys
+            </a>
+
+            <a href="{% url 'logout' %}" class="btn btn-danger shadow-sm font-weight-bold" style="border-radius: 50px; padding: 6px 16px;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 🔥 PORTFOLIO HOLDINGS SECTION -->
+    <div class="card shadow-sm border-0 mb-5" style="border-radius: 12px;">
+        <div class="card-header bg-dark text-white font-weight-bold py-3" style="border-radius: 12px 12px 0 0;">
+            <i class="fas fa-wallet"></i> My Portfolio & P&L
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover text-center mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Stock</th>
+                            <th>Qty</th>
+                            <th>Avg. Price</th>
+                            <th>LTP (₹)</th>
+                            <th>Invested (₹)</th>
+                            <th>Current Value (₹)</th>
+                            <th>Unrealized P&L</th>
+                            <th>Realized P&L</th>
+                            <th>Total P&L</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for holding in my_holdings %}
+                        <tr>
+                            <td class="align-middle font-weight-bold text-primary">{{ holding.symbol }}</td>
+                            <td class="align-middle">{{ holding.quantity }}</td>
+                            <td class="align-middle">₹{{ holding.avg_price }}</td>
+                            <td class="align-middle font-weight-bold">₹{{ holding.live_price }}</td>
+                            <td class="align-middle">₹{{ holding.invested }}</td>
+                            <td class="align-middle font-weight-bold">₹{{ holding.current_value }}</td>
+                            <td class="align-middle font-weight-bold {% if holding.unrealized_pl > 0 %}text-success{% elif holding.unrealized_pl < 0 %}text-danger{% endif %}">
+                                {% if holding.unrealized_pl > 0 %}+{% endif %}₹{{ holding.unrealized_pl }}
+                            </td>
+                            <td class="align-middle font-weight-bold {% if holding.realized_pl > 0 %}text-success{% elif holding.realized_pl < 0 %}text-danger{% endif %}">
+                                {% if holding.realized_pl > 0 %}+{% endif %}₹{{ holding.realized_pl }}
+                            </td>
+                            <td class="align-middle font-weight-bold {% if holding.total_pl > 0 %}text-success{% elif holding.total_pl < 0 %}text-danger{% endif %}" style="font-size: 1.1rem;">
+                                {% if holding.total_pl > 0 %}+{% endif %}₹{{ holding.total_pl }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="fas fa-box-open mb-3" style="font-size: 2.5rem; color: #cbd5e1;"></i>
+                                <h5>Your portfolio is empty</h5>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 FULL WIDTH WATCHLIST SECTION -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px;">
+                <div class="card-header bg-white font-weight-bold py-3 d-flex justify-content-between align-items-center flex-wrap" style="border-radius: 12px 12px 0 0;">
+                    <div class="mb-2 mb-md-0"><i class="fas fa-list text-success"></i> My Watchlist</div>
+                    <div>
+                        <button class="btn btn-sm btn-warning font-weight-bold text-dark mr-2 shadow-sm" data-toggle="modal" data-target="#aiModal" data-bs-toggle="modal" data-bs-target="#aiModal" onclick="fetchBulkAI('{% url 'ai_analyze_stocks_gemini' %}')">
+                            <i class="fas fa-magic"></i> AI Analyze All
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary mr-2 shadow-sm" onclick="refreshLivePrices()" id="refreshBtn">
+                            <i class="fas fa-sync-alt"></i> Refresh All Live
+                        </button>
+                        <a href="{% url 'select_stocks' %}" class="btn btn-sm btn-primary shadow-sm" style="border-radius: 6px;"><i class="fas fa-plus"></i> Add Stocks</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-center">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="text-left pl-4">Stock Name</th>
+                                    <th>Live Price (₹)</th>
+                                    <th>Last Updated</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in stocks_with_prices %}
+                                <tr>
+                                    <td class="text-left pl-4 font-weight-bold text-primary">
+                                        <a href="{% url 'stock_detail' item.stock.symbol %}" style="text-decoration: none;">
+                                            {{ item.stock.symbol }} <i class="fas fa-external-link-alt text-muted" style="font-size: 0.8rem;"></i>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span id="price-{{ item.stock.symbol }}" class="font-weight-bold text-success" style="font-size: 1.2rem;">
+                                            {{ item.latest_price.display_price }}
+                                        </span>
+                                    </td>
+                                    <td id="time-{{ item.stock.symbol }}" class="text-muted" style="font-size: 0.9rem;">
+                                        {{ item.latest_price.formatted_time }}
+                                    </td>
+                                    <td class="text-center">
+                                        <!-- 🔥 BUTTONS PROPERLY ALIGNED IN ACTIONS COLUMN -->
+                                        <div class="btn-group shadow-sm" role="group">
+                                            <!-- Single Update Button -->
+                                            <button type="button" class="btn btn-sm btn-outline-dark font-weight-bold" onclick="refreshSingleStock('{{ item.stock.symbol }}', '{% url 'fetch_single_price' item.stock.symbol %}')" title="Fetch Latest Price">
+                                                <i class="fas fa-sync-alt" id="sync-icon-{{ item.stock.symbol }}"></i> Update
+                                            </button>
+
+                                            <button type="button" class="btn btn-sm btn-success font-weight-bold" onclick="executeTrade('{{ item.stock.symbol }}', 'BUY')">Buy</button>
+                                            <button type="button" class="btn btn-sm btn-danger font-weight-bold" onclick="executeTrade('{{ item.stock.symbol }}', 'SELL')">Sell</button>
+                                            <a href="{% url 'price_history' item.stock.symbol %}" class="btn btn-sm btn-info text-white font-weight-bold">History</a>
+
+                                            <button type="button" class="btn btn-sm btn-warning font-weight-bold text-dark" data-toggle="modal" data-target="#aiModal" data-bs-toggle="modal" data-bs-target="#aiModal" onclick="fetchSingleAI('{{ item.stock.symbol }}', '{% url 'ai_analyze_history' item.stock.symbol %}')">
+                                                <i class="fas fa-robot"></i> AI
+                                            </button>
+                                            <a href="{% url 'remove_stock' item.stock.id %}" class="btn btn-sm btn-outline-danger font-weight-bold" onclick="return confirm('Remove {{ item.stock.symbol }} from watchlist?');">Remove</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">No stocks selected. Add stocks to track live prices.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 FULL WIDTH RECENT ORDERS SECTION (SHIFTED BELOW) -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px;">
+                <div class="card-header bg-white font-weight-bold py-3" style="border-radius: 12px 12px 0 0;">
+                    <i class="fas fa-history text-warning"></i> Recent Orders
+                </div>
+                <div class="card-body p-0">
+                    <!-- Changed from list to table for better wide-screen view -->
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 text-center align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Stock Symbol</th>
+                                    <th>Quantity</th>
+                                    <th>Price Executed (₹)</th>
+                                    <th>Date & Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in my_orders|slice:":5" %}
+                                <tr>
+                                    <td>
+                                        <span class="badge {% if order.action == 'BUY' %}bg-success{% else %}bg-danger{% endif %} text-white" style="border-radius: 4px; padding: 6px 10px;">{{ order.action }}</span>
+                                    </td>
+                                    <td class="font-weight-bold text-dark">{{ order.stock.symbol }}</td>
+                                    <td>{{ order.quantity }}</td>
+                                    <td class="font-weight-bold">₹{{ order.price }}</td>
+                                    <td class="text-muted">{{ order.timestamp|date:"d M Y, H:i" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No recent trades found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-white text-center border-0 py-3" style="border-radius: 0 0 12px 12px;">
+                        <a href="{% url 'order_history' %}" class="text-primary font-weight-bold text-decoration-none">View All Detailed Orders <i class="fas fa-arrow-right ml-1"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 🔥 MODALS & JAVASCRIPT KEEP AS IS BELOW -->
+<!-- ========================================== -->
+
+<!-- AI ANALYSIS MODAL -->
+<div class="modal fade" id="aiModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content shadow-lg" style="border-radius: 12px;">
+            <div class="modal-header bg-warning border-0" style="border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title font-weight-bold text-dark"><i class="fas fa-brain"></i> Gemini AI Analysis</h5>
+                <button type="button" class="close text-dark" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body bg-light" id="aiModalBody">
+                <!-- Content injected by JS -->
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary font-weight-bold" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FIRST TIME ONBOARDING MODAL -->
+{% if user.is_authenticated and not user.profile.groww_api_key and not user.profile.dhan_access_token and not user.profile.gemini_api_key %}
+    <div class="modal fade" id="onboardingModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow-lg" style="border-radius: 15px; border: none;">
+                <div class="modal-header bg-primary text-white text-center d-block border-0" style="border-radius: 15px 15px 0 0;">
+                    <h4 class="modal-title font-weight-bold mb-0"><i class="fas fa-rocket mr-2"></i> Welcome to Algo System!</h4>
+                </div>
+                <div class="modal-body text-center p-5">
+                    <i class="fas fa-cogs text-secondary mb-4" style="font-size: 4rem;"></i>
+                    <h5 class="font-weight-bold mb-3">API Keys Required</h5>
+                    <p class="text-muted mb-4">
+                        Pehli baar login karne par aapko apni <strong>Broker API Keys</strong> (Groww/Dhan) aur <strong>Gemini AI Key</strong> set karni hogi.
+                    </p>
+                    <a href="{% url 'broker_settings' %}" class="btn btn-primary btn-lg font-weight-bold w-100 shadow-sm" style="border-radius: 8px;">
+                        Set Up My API Keys Now <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            if (typeof $ !== 'undefined') {
+                $('#onboardingModal').modal({ backdrop: 'static', keyboard: false });
+                $('#onboardingModal').modal('show');
+            }
+        });
+    </script>
+{% endif %}
+
+<!-- JAVASCRIPT FUNCTIONS -->
+<script>
+    // 1. LIVE CLOCK
+    function startLiveClock() {
+        setInterval(function() {
+            let now = new Date();
+            let clockEl = document.getElementById('liveMarketClock');
+            if (clockEl) {
+                clockEl.innerText = now.toLocaleTimeString('en-IN', { hour12: true });
+            }
+        }, 1000);
+    }
+    startLiveClock();
+
+    // 2. BULK LIVE PRICE AUTO REFRESH
+    function refreshLivePrices() {
+        let btn = document.getElementById('refreshBtn');
+        if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+
+        fetch("{% url 'fetch_live_prices' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    data.prices.forEach(stock => {
+                        let priceEl = document.getElementById(`price-${stock.symbol}`);
+                        let timeEl = document.getElementById(`time-${stock.symbol}`);
+                        if(priceEl && timeEl) {
+                            priceEl.innerText = stock.price !== "Not Found" ? stock.price : "Not Found";
+                            timeEl.innerText = stock.fetched_at;
+                            priceEl.style.color = "#FF9800";
+                            setTimeout(() => { priceEl.style.color = "#28a745"; }, 1000);
+                        }
+                    });
+                }
+            })
+            .catch(error => console.error('Error fetching live prices:', error))
+            .finally(() => {
+                if(btn) btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh All Live';
+            });
+    }
+
+    //setInterval(refreshLivePrices, 15000);
+
+    // 3. SINGLE STOCK REFRESH SCRIPT
+    function refreshSingleStock(symbol, url) {
+        let icon = document.getElementById(`sync-icon-${symbol}`);
+        if (icon) icon.classList.add("fa-spin");
+
+        fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                let priceEl = document.getElementById(`price-${symbol}`);
+                let timeEl = document.getElementById(`time-${symbol}`);
+                if (priceEl && timeEl) {
+                    priceEl.innerText = data.price !== "Not Found" ? data.price : "Not Found";
+                    timeEl.innerText = data.fetched_at;
+                    priceEl.style.color = "#FF9800";
+                    setTimeout(() => { priceEl.style.color = "#28a745"; }, 1000);
+                }
+            } else {
+                alert("Error updating " + symbol + ": " + data.message);
+            }
+        })
+        .catch(err => console.error(err))
+        .finally(() => {
+            if (icon) icon.classList.remove("fa-spin");
+        });
+    }
+
+    // 4. BULLETPROOF TRADE EXECUTION (JSON Parser Fix)
+    function executeTrade(symbol, action) {
+        let qty = prompt(`Enter quantity to ${action} for ${symbol}:`, "1");
+
+        if (qty != null && qty.trim() !== "") {
+            let formData = new FormData();
+            formData.append("symbol", symbol);
+            formData.append("action", action);
+            formData.append("quantity", qty);
+
+            fetch("{% url 'place_order' %}", {
+                method: "POST",
+                body: formData,
+                headers: { "X-CSRFToken": "{{ csrf_token }}" }
+            })
+            .then(async response => {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return response.json();
+                } else {
+                    let text = await response.text();
+                    console.error("Backend Error:", text);
+                    throw new Error("Backend Returned HTML instead of JSON. Check Views.");
+                }
+            })
+            .then(data => {
+                if (data.status === "success") {
+                    alert("✅ " + data.message);
+                    location.reload();
+                } else {
+                    alert("❌ Error: " + data.message);
+                }
+            })
+            .catch(error => alert("Request failed: " + error.message));
+        }
+    }
+
+    // 5. AI FUNCTIONS
+    function fetchSingleAI(symbol, url) {
+        document.getElementById('aiModalBody').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3"></i>
+                <h5 class="text-muted">Gemini is analyzing ${symbol}... Please wait.</h5>
+            </div>
+        `;
+        fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('aiModalBody').innerHTML = `<div class="p-3">${data.analysis}</div>`;
+            } else {
+                document.getElementById('aiModalBody').innerHTML = `<div class="alert alert-danger"><b>Error:</b> ${data.message}</div>`;
+            }
+        })
+        .catch(error => {
+            document.getElementById('aiModalBody').innerHTML = `<div class="alert alert-danger">Error reaching AI server.</div>`;
+        });
+    }
+
+    function fetchBulkAI(url) {
+        document.getElementById('aiModalBody').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3"></i>
+                <h5 class="text-muted">Analyzing all watchlist stocks... This may take a minute.</h5>
+            </div>
+        `;
+        fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                let htmlContent = '';
+                data.data.forEach(item => {
+                    htmlContent += `
+                        <div class="card mb-3 border-0 shadow-sm">
+                            <div class="card-header bg-dark text-white font-weight-bold">${item.symbol}</div>
+                            <div class="card-body bg-white">${item.analysis}</div>
+                        </div>
+                    `;
+                });
+                document.getElementById('aiModalBody').innerHTML = htmlContent;
+            } else {
+                document.getElementById('aiModalBody').innerHTML = `<div class="alert alert-danger"><b>Error:</b> ${data.message}</div>`;
+            }
+        })
+        .catch(error => {
+            document.getElementById('aiModalBody').innerHTML = `<div class="alert alert-danger">Error reaching AI server.</div>`;
+        });
+    }
+</script>
+{% endblock %}

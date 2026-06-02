@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-5 px-md-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="font-weight-bold text-dark"><i class="fas fa-search-plus text-primary"></i> Add Stocks to Watchlist</h2>
+            <p class="text-muted">Select stocks from the master database to add to your live algo dashboard.</p>
+        </div>
+        <div>
+            <a href="{% url 'index' %}" class="btn btn-outline-secondary font-weight-bold shadow-sm" style="border-radius: 8px;">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm font-weight-bold" style="border-radius: 8px;" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="border: none; background: transparent; cursor: pointer;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px;">
+
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap" style="border-radius: 12px 12px 0 0;">
+                <h5 class="font-weight-bold mb-0 text-dark">Available Stocks</h5>
+
+                <div class="mt-2 mt-md-0 d-flex align-items-center" style="gap: 10px;">
+                    <button type="button" class="btn btn-sm btn-outline-dark font-weight-bold" onclick="toggleSelect(true)" style="border-radius: 6px;">
+                        Select All
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-dark font-weight-bold" onclick="toggleSelect(false)" style="border-radius: 6px;">
+                        Deselect All
+                    </button>
+
+                    <button type="submit" class="btn btn-sm btn-primary font-weight-bold shadow-sm" style="border-radius: 6px; padding: 6px 16px;">
+                        <i class="fas fa-plus"></i> Add Selected to Watchlist
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 65vh; overflow-y: auto;">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light sticky-top" style="z-index: 1;">
+                            <tr>
+                                <th class="pl-4">Select</th>
+                                <th>Symbol</th>
+                                <th>Stock Name</th>
+                                <th>Exchange</th>
+                                <th>Security ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in available_stocks %}
+                            <tr>
+                                <td class="pl-4">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input stock-checkbox" name="selected_stocks" value="{{ stock.symbol }}" id="check_{{ stock.symbol }}">
+                                        <label class="custom-control-label" for="check_{{ stock.symbol }}" style="cursor: pointer;"></label>
+                                    </div>
+                                </td>
+
+                                <td class="font-weight-bold text-dark">{{ stock.symbol }}</td>
+
+                                <td class="text-muted">{{ stock.stock_name|default:"EQUITY" }}</td>
+
+                                <td>
+                                    <span class="badge bg-primary text-white p-1 shadow-sm" style="border-radius: 4px; font-size: 0.8rem;">NSE</span>
+                                </td>
+
+                                <td class="font-weight-bold text-info" style="letter-spacing: 0.5px;">
+                                    {{ stock.security_id|default:"-" }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="fas fa-box-open fa-3x mb-3" style="color: #cbd5e1;"></i>
+                                    <h5>No stocks found in the master database.</h5>
+                                    <p>Please ensure your CSV is loaded properly in the backend.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-footer bg-light border-0 d-flex justify-content-end py-3" style="border-radius: 0 0 12px 12px;">
+                <button type="submit" class="btn btn-primary font-weight-bold shadow-sm" style="border-radius: 8px; padding: 10px 20px;">
+                    <i class="fas fa-plus"></i> Add Selected to Watchlist
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleSelect(isSelectAll) {
+        // Find all checkboxes with the class 'stock-checkbox'
+        const checkboxes = document.querySelectorAll('.stock-checkbox');
+
+        checkboxes.forEach((checkbox) => {
+            checkbox.checked = isSelectAll;
+        });
+
+        // Optional: Show a tiny feedback toast or alert here if you want
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-5 px-md-5">
+
+    <!-- 🔥 HEADER ROW -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="font-weight-bold"><i class="fas fa-chart-area text-primary"></i> {{ symbol }} - Market View</h2>
+            <p class="text-muted">Analyze live charts, historical trends, and AI predictions.</p>
+        </div>
+        <div>
+            <a href="{% url 'index' %}" class="btn btn-outline-secondary font-weight-bold shadow-sm" style="border-radius: 8px;">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- 🔥 TOP STATS CARDS -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px; background-color: #e3f2fd;">
+                <div class="card-body text-center p-3">
+                    <h6 class="text-primary mb-1">Open Price</h6>
+                    <h4 class="font-weight-bold mb-0">₹{{ details.open }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px; background-color: #fce4e4;">
+                <div class="card-body text-center p-3">
+                    <h6 class="text-danger mb-1">Close Price</h6>
+                    <h4 class="font-weight-bold mb-0">₹{{ details.close }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px; background-color: #e8f5e9;">
+                <div class="card-body text-center p-3">
+                    <h6 class="text-success mb-1">Day High</h6>
+                    <h4 class="font-weight-bold mb-0">₹{{ details.high }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card shadow-sm border-0 h-100" style="border-radius: 12px; background-color: #fff3e0;">
+                <div class="card-body text-center p-3">
+                    <h6 class="text-warning mb-1" style="color: #d35400 !important;">Day Low</h6>
+                    <h4 class="font-weight-bold mb-0">₹{{ details.low }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 CHART SECTION -->
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px;">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap" style="border-radius: 12px 12px 0 0;">
+            <h5 class="font-weight-bold mb-0 text-dark">Market View</h5>
+
+            <div class="mt-2 mt-md-0">
+                <!-- CHART TOGGLE BUTTON -->
+                <button id="toggleChartBtn" class="btn btn-sm btn-success font-weight-bold shadow-sm mr-2" style="border-radius: 6px;">
+                    Switch to Area Chart
+                </button>
+
+                <!-- AI ANALYSIS BUTTON -->
+                <button class="btn btn-sm btn-warning font-weight-bold text-dark shadow-sm" style="border-radius: 6px;" data-toggle="modal" data-target="#chartAiModal" data-bs-toggle="modal" data-bs-target="#chartAiModal" onclick="fetchChartAI()">
+                    <i class="fas fa-magic"></i> AI Chart Analysis
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <!-- FILTERS (Time & Candle) -->
+            <form method="GET" action="{% url 'stock_detail' symbol %}" id="filterForm" class="mb-4">
+                <div class="d-flex align-items-center flex-wrap" style="gap: 15px;">
+
+                    <!-- Time Period Filter -->
+                    <div class="d-flex align-items-center border px-2 py-1 bg-light" style="border-radius: 6px;">
+                        <span class="text-muted mr-2" style="font-size: 0.9rem;">Time:</span>
+                        <select name="period" class="form-control form-control-sm border-0 bg-light" style="width: auto; box-shadow: none; font-weight: bold;" onchange="document.getElementById('filterForm').submit();">
+                            <option value="1d" {% if current_period == '1d' %}selected{% endif %}>1D</option>
+                            <option value="5d" {% if current_period == '5d' %}selected{% endif %}>5D</option>
+                            <option value="1mo" {% if current_period == '1mo' %}selected{% endif %}>1M</option>
+                            <option value="3mo" {% if current_period == '3mo' %}selected{% endif %}>3M</option>
+                            <option value="6mo" {% if current_period == '6mo' %}selected{% endif %}>6M</option>
+                            <option value="1y" {% if current_period == '1y' %}selected{% endif %}>1Y</option>
+                        </select>
+                    </div>
+
+                    <!-- Candle Interval Filter (10m removed, 15m is standard) -->
+                    <div class="d-flex align-items-center border px-2 py-1 bg-light" style="border-radius: 6px;">
+                        <span class="text-muted mr-2" style="font-size: 0.9rem;">Candle:</span>
+                        <select name="interval" class="form-control form-control-sm border-0 bg-light" style="width: auto; box-shadow: none; font-weight: bold;" onchange="document.getElementById('filterForm').submit();">
+                            <option value="1m" {% if current_interval == '1m' %}selected{% endif %}>1m</option>
+                            <option value="2m" {% if current_interval == '2m' %}selected{% endif %}>2m</option>
+                            <option value="5m" {% if current_interval == '5m' %}selected{% endif %}>5m</option>
+                            <option value="15m" {% if current_interval == '15m' %}selected{% endif %}>15m</option>
+                            <option value="30m" {% if current_interval == '30m' %}selected{% endif %}>30m</option>
+                            <option value="1h" {% if current_interval == '1h' %}selected{% endif %}>1h</option>
+                            <option value="1d" {% if current_interval == '1d' %}selected{% endif %}>1D</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            <div id="stockChart" style="min-height: 450px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 🔥 AI CHART ANALYSIS MODAL -->
+<!-- ========================================== -->
+<div class="modal fade" id="chartAiModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content shadow-lg" style="border-radius: 12px;">
+            <div class="modal-header bg-warning border-0" style="border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title font-weight-bold text-dark"><i class="fas fa-brain"></i> Gemini Chart Analysis</h5>
+                <button type="button" class="close text-dark" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body bg-light" id="chartAiModalBody">
+                <!-- Content injected by JS -->
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary font-weight-bold" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 🔥 SCRIPTS -->
+<!-- ========================================== -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const candleData = {{ candlestick_data|safe }};
+        const areaData = {{ line_data|safe }};
+        const currentPeriod = "{{ current_period }}";
+
+        let currentChartType = 'candlestick';
+        let chart;
+
+        // 🔥 SMART TRADINGVIEW STYLE OPTIONS
+        let options = {
+            series: [{ name: 'Price', data: candleData }],
+            chart: {
+                type: 'candlestick',
+                height: 450,
+                toolbar: { show: true },
+                animations: { enabled: false } // Fast rendering
+            },
+            plotOptions: {
+                candlestick: {
+                    colors: {
+                        upward: '#00B746',   // Professional Green
+                        downward: '#EF403C'  // Professional Red
+                    },
+                    wick: { useFillColor: true }
+                },
+                // Candles ko patla rakhne ke liye
+                bar: { columnWidth: '40%' }
+            },
+
+            // 🔥 DYNAMIC X-AXIS: 1D ke liye datetime (perfect spacing), baaki ke liye category (no overnight gaps)
+            xaxis: {
+                type: currentPeriod === '1d' ? 'datetime' : 'category',
+                tickAmount: 6, // Overlap se bachne ke liye sirf 6 labels
+                labels: {
+                    style: { colors: '#78909c' },
+                    datetimeFormatter: {
+                        year: 'yyyy',
+                        month: 'MMM \'yy',
+                        day: 'dd MMM',
+                        hour: 'HH:mm'
+                    }
+                }
+            },
+
+            yaxis: {
+                tooltip: { enabled: true },
+                labels: {
+                    formatter: function (value) { return "₹" + value.toFixed(2); },
+                    style: { colors: '#78909c' }
+                }
+            },
+            grid: {
+                borderColor: '#e0e0e0',
+                strokeDashArray: 4,
+            }
+        };
+
+        // Initialize Chart
+        chart = new ApexCharts(document.querySelector("#stockChart"), options);
+        chart.render();
+
+        // 🔥 TOGGLE CHART TYPE (Candlestick <-> Area)
+        const toggleBtn = document.getElementById('toggleChartBtn');
+        toggleBtn.addEventListener('click', function() {
+            if (currentChartType === 'candlestick') {
+                chart.updateOptions({
+                    series: [{ name: 'Price', data: areaData }],
+                    chart: { type: 'area' },
+                    stroke: { curve: 'smooth', width: 2 },
+                    fill: {
+                        type: 'gradient',
+                        gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.1, stops: [0, 90, 100] }
+                    },
+                    colors: ['#00B746'] // Green Area chart
+                });
+                toggleBtn.innerText = "Switch to Candlestick";
+                toggleBtn.classList.replace('btn-success', 'btn-primary');
+                currentChartType = 'area';
+            } else {
+                chart.updateOptions({
+                    series: [{ name: 'Price', data: candleData }],
+                    chart: { type: 'candlestick' },
+                    colors: undefined // Reset colors for candlestick
+                });
+                toggleBtn.innerText = "Switch to Area Chart";
+                toggleBtn.classList.replace('btn-primary', 'btn-success');
+                currentChartType = 'candlestick';
+            }
+        });
+    });
+
+    // 🔥 AI CHART ANALYSIS NATIVE JS
+    function fetchChartAI() {
+        document.getElementById('chartAiModalBody').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3"></i>
+                <h5 class="text-muted">Gemini is analyzing the chart for {{ symbol }}... Please wait.</h5>
+            </div>
+        `;
+
+        fetch("{% url 'ai_analyze_history' symbol %}")
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('chartAiModalBody').innerHTML = `<div class="p-3">${data.analysis}</div>`;
+            } else {
+                document.getElementById('chartAiModalBody').innerHTML = `<div class="alert alert-danger font-weight-bold">${data.message}</div>`;
+            }
+        })
+        .catch(error => {
+            document.getElementById('chartAiModalBody').innerHTML = `<div class="alert alert-danger">Error reaching AI server.</div>`;
+        });
+    }
+</script>
+
+{% endblock %}

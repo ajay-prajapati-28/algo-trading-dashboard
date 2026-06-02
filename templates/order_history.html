@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-book"></i> My Trade Book</h2>
+            <h6 class="text-secondary">Your complete order history</h6>
+        </div>
+        <div>
+            <a href="{% url 'index' %}" class="btn btn-secondary shadow-sm">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 text-center">
+                    <thead class="bg-dark text-white">
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Action</th>
+                            <th>Symbol</th>
+                            <th>Quantity</th>
+                            <th>Avg. Price</th>
+                            <th>Total Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in my_orders %}
+                        <tr>
+                            <td>{{ order.timestamp|date:"Y-m-d h:i A" }}</td>
+                            <td class="font-weight-bold {% if order.action == 'BUY' %}text-success{% else %}text-danger{% endif %}">
+                                {{ order.action }}
+                            </td>
+                            <td><strong>{{ order.stock.symbol }}</strong></td>
+                            <td>{{ order.quantity }}</td>
+                            <td>₹{{ order.price }}</td>
+                            <td>₹{% widthratio order.price 1 order.quantity %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <h5>No trades taken yet.</h5>
+                                <p>Go back to the dashboard and start trading!</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

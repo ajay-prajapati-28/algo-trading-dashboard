@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Portfolio</title>
+    <style>
+        body {
+            background-color: #1a202c;
+            color: white;
+            padding: 50px;
+            font-family: sans-serif;
+        }
+        .upload-card {
+            background-color: #2d3748;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            margin: 0 auto; /* Card ko center me lane ke liye */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #60a5fa;
+            margin-top: 0;
+        }
+        .submit-btn {
+            background-color: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .submit-btn:hover {
+            background-color: #2563eb;
+        }
+        /* File input ko sundar banane ke liye */
+        input[type="file"] {
+            margin-top: 10px;
+            width: 95%;
+            padding: 10px;
+            background-color: #1a202c;
+            border: 1px dashed #4a5568;
+            border-radius: 4px;
+            color: #e2e8f0;
+            cursor: pointer;
+        }
+        .link-text {
+            color: #4ade80;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .link-text:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="upload-card">
+        <h2>Upload NSDL / Groww File</h2>
+        <p style="color: #a0aec0; font-size: 14px; margin-bottom: 25px;">
+            Apni `sec_bhavdata` ya koi aur CSV portfolio file yahan upload karein.
+        </p>
+
+        <form action="/" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <input type="file" name="portfolio_file" accept=".csv, .xlsx, .xls" required>
+
+            <button type="submit" class="submit-btn">Upload & Continue</button>
+        </form>
+
+        <br>
+        <a href="/update-master/" class="link-text">⚙️ Master Database Update Karna Hai? Yahan Click Karein</a>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="mb-4">Upload Stock File</h2>
+
+        <!-- Naya File Upload Form -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>Format Required:</strong> Upload a CSV (.csv) or Excel (.xlsx, .xls) file with these exact column headers:
+                    <ul>
+                        <li><code>Stock Name</code></li>
+                        <li><code>Symbol</code></li>
+                        <li><code>Symbol ID</code> (Write BSE or NSE here)</li>
+                    </ul>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="file" class="form-label fw-bold">Select New File from Computer</label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".xlsx, .xls, .csv">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Upload & Parse New File</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Recent Uploads Section -->
+        {% if files %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Or Use Recent Uploads</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for f in files %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ f.original_filename }}</strong><br>
+                        <small class="text-muted">Uploaded on: {{ f.uploaded_at|date:"Y-m-d H:i" }}</small>
+                    </div>
+
+                    <!-- Purani file load karne ka form -->
+                    <form method="POST" class="m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="file_id" value="{{ f.id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-success">Use This File</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

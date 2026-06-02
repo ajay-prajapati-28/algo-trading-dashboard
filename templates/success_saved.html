@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Saved Successfully</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { border: 1px solid #4a5568; padding: 12px 15px; text-align: left; }
+        th { background-color: #2d3748; color: #e2e8f0; position: sticky; top: 0; z-index: 10; }
+        th.live-price-header { color: #4ade80; background-color: #1e293b; font-weight: bold; }
+        tr:nth-child(even) { background-color: #2d3748; }
+        tr:nth-child(odd) { background-color: #1a202c; }
+        .btn { display: inline-block; background-color: #4ade80; color: #1a202c; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px; }
+        .btn:hover { background-color: #22c55e; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1a202c; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+    </style>
+</head>
+<body style="background-color: #1a202c; color: white; padding: 50px; font-family: sans-serif;">
+
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+        <div style="background-color: #16a34a; color: white; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">✓</div>
+        <div>
+            <h2 style="color: #4ade80; margin: 0; font-size: 24px;">Success! Data Saved</h2>
+            <p style="color: #a0aec0; margin: 5px 0 0 0;">{{ count }} stocks successfully database me store ho gaye hain aur unka live rate fetch ho chuka hai.</p>
+        </div>
+    </div>
+
+    <div style="background-color: #2d3748; padding: 20px; border-radius: 8px; width: 100%; overflow-x: auto; max-height: 550px; overflow-y: auto; margin-top: 25px;">
+        <table>
+            <thead>
+                <tr>
+                    <th style="color: #4ade80; width: 50px;">#</th>
+                    {% for col in columns %}
+                        {% if "Live Price" in col %}
+                            <th class="live-price-header">{{ col }}</th>
+                        {% else %}
+                            <th>{{ col }}</th>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in saved_stocks %}
+                    <tr>
+                        <td style="color: #a0aec0; font-weight: bold;">{{ forloop.counter }}</td>
+                        {% for key, value in stock.items %}
+                            {% if "Live Price" in key %}
+                                <td style="color: #4ade80; font-weight: bold; background-color: rgba(22, 163, 74, 0.15);">
+                                    {% if value == "N/A" or value == "Error" %}
+                                        <span style="color: #f87171;">{{ value }}</span>
+                                    {% else %}
+                                        ₹{{ value }}
+                                    {% endif %}
+                                </td>
+                            {% else %}
+                                <td>{{ value }}</td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <br>
+    <a href="/" class="btn">← Upload Another NSDL File</a>
+
+</body>
+</html>

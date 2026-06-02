@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="font-weight-bold"><i class="fas fa-layer-group text-primary"></i> Backtest Dashboard</h2>
+            <p class="text-muted">Manage and compare your algorithmic trading strategies.</p>
+        </div>
+        <div class="mt-2 mt-md-0 d-flex flex-wrap" style="gap: 10px;">
+            <button id="compareBtn" class="btn btn-warning font-weight-bold shadow-sm" style="border-radius: 8px;">
+                <i class="fas fa-balance-scale"></i> Compare Selected
+            </button>
+            <button id="deleteSelectedBtn" class="btn btn-danger font-weight-bold shadow-sm" style="border-radius: 8px;">
+                <i class="fas fa-trash-alt"></i> Delete Selected
+            </button>
+            <a href="{% url 'backtest_create' %}" class="btn btn-primary font-weight-bold shadow-sm" style="border-radius: 8px;">
+                <i class="fas fa-plus"></i> New Backtest
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0" style="border-radius: 12px;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="align-middle text-center" style="width: 50px;">
+                                <input type="checkbox" id="selectAllCb" style="transform: scale(1.2); cursor: pointer;">
+                            </th>
+                            <th class="py-3">Strategy Name</th>
+                            <th class="py-3">Stock</th>
+                            <th class="py-3">Type</th>
+                            <th class="py-3">Date Range</th>
+                            <th class="py-3">Capital (₹)</th>
+                            <th class="py-3">Return %</th>
+                            <th class="py-3">Win Rate</th>
+                            <th class="py-3">Trades</th>
+                            <th class="py-3">Sharpe</th>
+                            <th class="py-3 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in strategy_data %}
+                        <tr>
+                            <td class="align-middle text-center">
+                                <input type="checkbox" class="row-checkbox" value="{{ data.strategy.id }}" style="transform: scale(1.2); cursor: pointer;">
+                            </td>
+
+                            <td class="align-middle font-weight-bold">{{ data.strategy.name }}</td>
+                            <td class="align-middle text-muted">{{ data.strategy.stock.symbol }}</td>
+                            <td class="align-middle">
+                                <span class="badge bg-info text-white px-2 py-1" style="border-radius: 6px;">{{ data.strategy.strategy_type }} Strategy</span>
+                            </td>
+                            <td class="align-middle" style="font-size: 0.9rem;">
+                                {{ data.strategy.start_date }} to <br> {{ data.strategy.end_date }}
+                            </td>
+                            <td class="align-middle">{{ data.strategy.initial_capital|floatformat:2 }}</td>
+
+                            <td class="align-middle font-weight-bold {% if data.result.total_return_pct > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if data.result.total_return_pct > 0 %}+{% endif %}{{ data.result.total_return_pct }}%
+                            </td>
+                            <td class="align-middle">{{ data.result.win_rate }}%</td>
+                            <td class="align-middle">{{ data.result.total_trades }}</td>
+                            <td class="align-middle">{{ data.result.sharpe_ratio }}</td>
+
+                            <td class="align-middle text-center text-nowrap">
+                                <a href="{% url 'backtest_result' data.result.id %}" class="btn btn-sm btn-outline-primary shadow-sm mr-1" style="border-radius: 6px;">View</a>
+                                <a href="{% url 'backtest_delete' data.strategy.id %}" class="btn btn-sm btn-outline-danger shadow-sm" style="border-radius: 6px;" onclick="return confirm('Are you sure you want to delete this single backtest?');">Del</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="11" class="text-center py-5 text-muted">
+                                <i class="fas fa-folder-open mb-3" style="font-size: 2.5rem; color: #cbd5e1;"></i>
+                                <h5>No backtests found</h5>
+                                <p>Click on 'New Backtest' to create your first strategy test.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="bulkDeleteForm" method="POST" action="{% url 'backtest_bulk_delete' %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="ids" id="bulkDeleteIds">
+</form>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+
+        // 🔥 NAYA CODE: Auto-fade notifications after 3 seconds
+        setTimeout(function() {
+            let alerts = document.querySelectorAll('.alert'); // Ye alert box ko pakdega
+            alerts.forEach(function(alert) {
+                alert.style.transition = "opacity 0.5s ease";
+                alert.style.opacity = "0"; // Dheere dheere gayab karega
+                setTimeout(function() {
+                    alert.style.display = "none"; // Screen se hata dega
+                }, 500);
+            });
+        }, 3000); // 3000 milliseconds = 3 seconds baad gayab hoga
+
+        const selectAllCb = document.getElementById('selectAllCb');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+
+        // 1. Select All Checkbox Logic
+        if(selectAllCb) {
+            selectAllCb.addEventListener('change', function() {
+                rowCheckboxes.forEach(cb => {
+                    cb.checked = selectAllCb.checked;
+                });
+            });
+        }
+
+        // Helper function to get checked IDs
+        function getSelectedIds() {
+            let ids = [];
+            rowCheckboxes.forEach(cb => {
+                if(cb.checked) ids.push(cb.value);
+            });
+            return ids;
+        }
+
+        // 2. Delete Selected Button Logic
+        document.getElementById('deleteSelectedBtn').addEventListener('click', function() {
+            let selectedIds = getSelectedIds();
+
+            if(selectedIds.length === 0) {
+                alert("Bhai, pehle koi strategy toh select karo delete karne ke liye! 😅");
+                return;
+            }
+
+            if(confirm(`Are you sure you want to delete ${selectedIds.length} backtests forever?`)) {
+                // Hidden form ke input me IDs dalo aur submit kardo
+                document.getElementById('bulkDeleteIds').value = selectedIds.join(',');
+                document.getElementById('bulkDeleteForm').submit();
+            }
+        });
+
+        // 3. Compare Selected Button Logic
+        document.getElementById('compareBtn').addEventListener('click', function() {
+            let selectedIds = getSelectedIds();
+
+            if(selectedIds.length < 2) {
+                alert("Compare karne ke liye kam se kam 2 strategies select karni padengi!");
+                return;
+            }
+
+            // Redirect to compare page with selected IDs
+            window.location.href = "{% url 'backtest_compare' %}?ids=" + selectedIds.join(',');
+        });
+    });
+</script>
+{% endblock %}

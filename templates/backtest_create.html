@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="mb-4">Create New Backtest</h2>
+        
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="POST" id="backtestForm" onsubmit="showLoading()">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Strategy Name</label>
+                            <input type="text" name="name" class="form-control" required placeholder="e.g. Reliance SMA Crossover">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Stock</label>
+                            <select name="stock_id" class="form-select" required>
+                                <option value="">Select Stock...</option>
+                                {% for stock in stocks %}
+                                <option value="{{ stock.id }}">{{ stock.symbol }} - {{ stock.company_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Strategy Type</label>
+                            <select name="strategy_type" class="form-control" required style="border-radius: 8px;">
+                                <option value="ALL" class="font-weight-bold text-success">Run ALL Strategies</option>
+
+                                <option value="SMA">SMA Crossover</option>
+                                <option value="EMA">EMA Crossover</option>
+                                <option value="RSI">RSI Strategy</option>
+                                <option value="MACD">MACD</option>
+                                <option value="BollingerBands">Bollinger Bands</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" name="start_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="end_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Initial Capital (₹)</label>
+                            <input type="number" name="initial_capital" class="form-control" value="100000" required>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5 class="mb-3">Parameters</h5>
+                    
+                    <div id="param_ma" class="param-div row mb-3" style="display: none;">
+                        <div class="col-md-6">
+                            <label class="form-label">Fast Period</label>
+                            <input type="number" name="param_fast_period" class="form-control" value="10">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Slow Period</label>
+                            <input type="number" name="param_slow_period" class="form-control" value="30">
+                        </div>
+                    </div>
+                    
+                    <div id="param_macd" class="param-div row mb-3" style="display: none;">
+                        <div class="col-md-4">
+                            <label class="form-label">Fast Period</label>
+                            <input type="number" name="param_fast_period" class="form-control" value="12" disabled>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Slow Period</label>
+                            <input type="number" name="param_slow_period" class="form-control" value="26" disabled>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Signal Period</label>
+                            <input type="number" name="param_signal_period" class="form-control" value="9">
+                        </div>
+                    </div>
+
+                    <div id="param_rsi" class="param-div row mb-3" style="display: none;">
+                        <div class="col-md-4">
+                            <label class="form-label">RSI Period</label>
+                            <input type="number" name="param_rsi_period" class="form-control" value="14">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Overbought</label>
+                            <input type="number" name="param_rsi_overbought" class="form-control" value="70">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Oversold</label>
+                            <input type="number" name="param_rsi_oversold" class="form-control" value="30">
+                        </div>
+                    </div>
+
+                    <div id="param_bb" class="param-div row mb-3" style="display: none;">
+                        <div class="col-md-6">
+                            <label class="form-label">Period</label>
+                            <input type="number" name="param_bb_period" class="form-control" value="20">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Standard Deviation</label>
+                            <input type="number" step="0.1" name="param_bb_std" class="form-control" value="2.0">
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" id="submitBtn" class="btn btn-success btn-lg">Run Backtest</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleParams() {
+        const type = document.getElementById('strategy_type').value;
+        document.querySelectorAll('.param-div').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.param-div input').forEach(el => el.disabled = true);
+        
+        if (type === 'SMA_CROSSOVER' || type === 'EMA_CROSSOVER') {
+            const div = document.getElementById('param_ma');
+            div.style.display = 'flex';
+            div.querySelectorAll('input').forEach(el => el.disabled = false);
+        } else if (type === 'MACD') {
+            const div = document.getElementById('param_macd');
+            div.style.display = 'flex';
+            div.querySelectorAll('input').forEach(el => el.disabled = false);
+        } else if (type === 'RSI') {
+            const div = document.getElementById('param_rsi');
+            div.style.display = 'flex';
+            div.querySelectorAll('input').forEach(el => el.disabled = false);
+        } else if (type === 'BOLLINGER_BANDS') {
+            const div = document.getElementById('param_bb');
+            div.style.display = 'flex';
+            div.querySelectorAll('input').forEach(el => el.disabled = false);
+        }
+    }
+
+    function showLoading() {
+        const btn = document.getElementById('submitBtn');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Running Strategy...';
+        btn.disabled = true;
+    }
+</script>
+{% endblock %}

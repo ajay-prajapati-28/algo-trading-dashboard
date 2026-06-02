@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'backtest_dashboard' %}" class="btn btn-outline-secondary btn-sm mb-3">&larr; Back to Dashboard</a>
+    <h2>Compare Backtests</h2>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped mb-0 text-center align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="text-start">Metric</th>
+                        {% for r in results %}
+                        <th>{{ r.strategy.name }}<br><small class="text-light fw-normal">{{ r.strategy.stock.symbol }}</small></th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th class="text-start">Strategy Type</th>
+                        {% for r in results %}<td>{{ r.strategy.get_strategy_type_display }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                        <th class="text-start">Return %</th>
+                        {% for r in results %}<td class="fw-bold {% if r.total_return_pct >= 0 %}text-success{% else %}text-danger{% endif %}">{{ r.total_return_pct|floatformat:2 }}%</td>{% endfor %}
+                    </tr>
+                    <tr>
+                        <th class="text-start">Win Rate %</th>
+                        {% for r in results %}<td>{{ r.win_rate|floatformat:2 }}%</td>{% endfor %}
+                    </tr>
+                    <tr>
+                        <th class="text-start">Total Trades</th>
+                        {% for r in results %}<td>{{ r.total_trades }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                        <th class="text-start">Max Drawdown %</th>
+                        {% for r in results %}<td>{{ r.max_drawdown_pct|floatformat:2 }}%</td>{% endfor %}
+                    </tr>
+                    <tr>
+                        <th class="text-start">Sharpe Ratio</th>
+                        {% for r in results %}<td>{{ r.sharpe_ratio|floatformat:2 }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                        <th class="text-start">Final Capital (₹)</th>
+                        {% for r in results %}<td>{{ r.final_capital }}</td>{% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Equity Curve Comparison</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="compareChart" height="100"></canvas>
+    </div>
+</div>
+
+<script>
+    const colors = ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#0dcaf0', '#6f42c1'];
+    const datasets = [];
+    let commonLabels = [];
+
+    {% for r in results %}
+        var curve_{{ r.id }} = {{ r.equity_curve_json|safe }};
+        if (commonLabels.length === 0 || curve_{{ r.id }}.length > commonLabels.length) {
+            commonLabels = curve_{{ r.id }}.map(d => d.date);
+        }
+        datasets.push({
+            label: "{{ r.strategy.name }}",
+            data: curve_{{ r.id }}.map(d => d.value),
+            borderColor: colors[{{ forloop.counter0 }} % colors.length],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.1
+        });
+    {% endfor %}
+
+    const ctx = document.getElementById('compareChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: commonLabels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            interaction: { intersect: false, mode: 'index' },
+            scales: { y: { beginAtZero: false } }
+        }
+    });
+</script>
+{% endblock %}
