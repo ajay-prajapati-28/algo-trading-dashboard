@@ -44,8 +44,6 @@ urlpatterns = [
     path('select/', views.select_stocks, name='select_stocks'),
     path('fetch-prices/', views.fetch_live_prices, name='fetch_live_prices'),
     path('api/latest-prices/', views.get_latest_prices, name='latest_prices'),
-
-# 🔥 YE LINE ADD KARO
     path('fetch_live_prices/', views.fetch_live_prices, name='fetch_live_prices'),
     # path('ai_analyze/', views.ai_analyze_stocks, name='ai_analyze'),
     path('ai_analyze_gemini/', views.ai_analyze_stocks_gemini, name='ai_analyze_gemini'),
@@ -53,7 +51,6 @@ urlpatterns = [
     path('ai/analyze-all/', views.ai_analyze_stocks_gemini, name='ai_analyze_stocks_gemini'),
     path('order_history/', views.order_history, name='order_history'),
     path('place_order/', views.place_order, name='place_order'),
-
     path('backtest/', views.backtest_dashboard, name='backtest_dashboard'),
     path('backtest/create/', views.backtest_create, name='backtest_create'),
     path('backtest/result/<int:pk>/', views.backtest_result, name='backtest_result'),
@@ -64,7 +61,6 @@ urlpatterns = [
     path('history/<str:symbol>/', views.price_history, name='price_history'),
     path('remove/<int:stock_id>/', views.remove_stock, name='remove_stock'),
     path('set-broker/<str:broker>/', views.set_broker, name='set_broker'),
-
     path('<str:symbol>/', views.stock_detail, name='stock_detail'),
     path('stock/<str:symbol>/', views.stock_detail, name='stock_detail'),
     path('fetch-single-price/<str:symbol>/', views.fetch_single_live_price, name='fetch_single_price'),
