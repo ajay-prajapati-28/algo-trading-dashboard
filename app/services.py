@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
-from dhanhq import dhanhq,DhanContext
-from datetime import datetime
+from dhanhq import dhanhq, DhanContext
+from datetime import datetime, timedelta
 import yfinance as yf
 import os
 from growwapi import GrowwAPI
@@ -20,24 +20,30 @@ _groww_client = None
 def get_groww_client():
     global _groww_client
     if _groww_client is None:
+        from django.contrib.auth.models import User
+        first_user = User.objects.first()
 
-        grow_api_key = os.getenv('GROW_API_KEY')
-        grow_secret_key = os.getenv('GROW_SECRET_KEY')
+        if not first_user or not hasattr(first_user, 'profile'):
+            print("⚠️ User Profile missing for Groww!")
+            return None
+
+        # Sirf API key (Browser Token) nikalenge, Secret key ki ab zaroorat hi nahi hai!
+        grow_api_key = first_user.profile.groww_api_key
+
+        # Token Sanitizer
+        token = str(grow_api_key).replace('Bearer ', '').replace('"', '').replace("'", "").strip()
+
         try:
-            access_token = GrowwAPI.get_access_token(api_key=grow_api_key, secret=grow_secret_key)
-            _groww_client = GrowwAPI(access_token)
-            print("✅ Groww API Connected")
+            # 🔥 SDE FIX: Sidha token pass karo. 'get_access_token' ko bypass kar diya!
+            _groww_client = GrowwAPI(token)
+
+            print("✅ Groww API Connected Directly (Session Token Auth)")
+            print(f"DEBUG - Groww Token being used: {token[:15]}...[HIDDEN]")
         except Exception as e:
-            print(f"❌ Groww Login Error: {e}")
+            print(f"❌ Groww Setup Error: {e}")
             return None
     return _groww_client
 
-
-import os
-from datetime import datetime, timedelta
-
-
-# Ensure DhanContext, dhanhq, get_groww_client are imported at the top of your services.py file
 
 def fetch_live_price(symbol: str, exchange: str = 'NSE', broker: str = 'groww', security_id: str = None):
     broker = broker.lower()
@@ -47,10 +53,7 @@ def fetch_live_price(symbol: str, exchange: str = 'NSE', broker: str = 'groww', 
         try:
             print(f"🟣 [DHAN API] Requesting {symbol}...")
 
-            # API Keys Initialization
             from django.contrib.auth.models import User
-
-            # Database se pehle user ko uthao (Agar tumhara personal algo dashboard hai)
             first_user = User.objects.first()
 
             if not first_user or not hasattr(first_user, 'profile'):
@@ -64,7 +67,6 @@ def fetch_live_price(symbol: str, exchange: str = 'NSE', broker: str = 'groww', 
                 print("⚠️ Dhan API Keys Database mein empty hain!")
                 return {'success': False, 'error': "Dhan API Keys missing in Profile", 'symbol': symbol}
 
-            # Ab in DB wali keys se Dhan client initialize karo
             dhan_context = DhanContext(dhan_client_id, dhan_access_token)
             dhan = dhanhq(dhan_context)
 
@@ -90,13 +92,9 @@ def fetch_live_price(symbol: str, exchange: str = 'NSE', broker: str = 'groww', 
 
                 if response and response.get('status') == 'success':
                     segment_data = response.get('data', {}).get(exchange_segment, {})
-
-                    # Double check format (string key vs int key)
                     stock_info = segment_data.get(str(dhan_sec_id)) or segment_data.get(int(dhan_sec_id)) or {}
-
                     ltp = stock_info.get('last_price')
 
-                    # Agar market band hai (0.0 hai), toh previous close uthao
                     if not ltp or float(ltp) == 0.0:
                         ltp = stock_info.get('previous_close')
                         print(f"⚠️ Market Closed. Extracted Previous Close: ₹{ltp}")
@@ -122,7 +120,6 @@ def fetch_live_price(symbol: str, exchange: str = 'NSE', broker: str = 'groww', 
                     to_date=to_date
                 )
 
-                # 🔥 THE SDE DEBUGGER: Historical response yahan print hoga
                 print(f"🚨 RAW HISTORICAL RESPONSE: {hist_data}")
 
                 if hist_data and hist_data.get('status') == 'success':
@@ -134,7 +131,6 @@ def fetch_live_price(symbol: str, exchange: str = 'NSE', broker: str = 'groww', 
             except Exception as hist_e:
                 print(f"⚠️ Historical Data error: {hist_e}")
 
-            # Agar sab fail ho gaya
             return {"success": False, "error": "Price not available (Dhan returned blank)", "symbol": symbol}
 
         except Exception as e:
@@ -154,12 +150,12 @@ def fetch_live_price(symbol: str, exchange: str = 'NSE', broker: str = 'groww', 
                 exchange = 'NSE'
 
             groww_symbol = f"{exchange}_{symbol}"
-
+            print(groww_symbol)
             response = groww.get_ltp(
                 segment=groww.SEGMENT_CASH,
                 exchange_trading_symbols=groww_symbol
             )
-
+            print(response)
             ltp = None
             if isinstance(response, dict):
                 if groww_symbol in response:
